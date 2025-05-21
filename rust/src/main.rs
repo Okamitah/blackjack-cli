@@ -1,12 +1,24 @@
 fn main() {
-    println!("Hello, world!");
-    start_game();
+    let mut pl = Player {
+        cards: vec![
+            Card{suit: Suit::Clubs, rank: Rank::Ace, value: 11},
+            Card{suit: Suit::Clubs, rank: Rank::Jack, value: 10}
+        ]
+    };
+    let vl = pl.hand_value();
+    println!("Hand's value: {:?}", vl);
+    let mut deck = Deck{cards:Vec::new()};
+    let mut deck_cards = deck.initiate();
+    pl.hit(deck_cards);
+    let vl = pl.hand_value();
+    println!("Hand's value: {:?}", vl);
+
 }
 
 #[derive(Debug)]
 struct Card {
     suit: Suit,
-    rank: String,
+    rank: Rank,
     value: u8,
 }
 
@@ -16,6 +28,56 @@ enum Suit {
     Diamonds,
     Spades,
     Clubs,
+}
+
+impl Suit {
+    fn iter() -> impl Iterator<Item=Self> {
+        [
+            Self::Clubs,
+            Self::Diamonds,
+            Self::Hearts,
+            Self::Spades,
+        ]
+        .into_iter()
+    }
+}
+
+#[derive(Debug ,Clone, Copy)]
+enum Rank {
+    Ace,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Jack,
+    Queen,
+    King,
+}
+
+impl Rank {
+    fn iter() -> impl Iterator<Item = Self> {
+        [
+            Self::Ace,
+            Self::Two,
+            Self::Three,
+            Self::Four,
+            Self::Five,
+            Self::Six,
+            Self::Seven,
+            Self::Eight,
+            Self::Nine,
+            Self::Ten,
+            Self::Jack,
+            Self::Queen,
+            Self::King,
+        ]
+            .into_iter()
+    }
 }
 
 #[derive(Debug)]
@@ -32,34 +94,34 @@ impl Player {
         sum
     }
 
-    fn hit(&self) {
+    fn hit(&mut self, mut deck: Vec<Card>) {
+        &self.cards.push(deck.pop().expect("Empty deck lil asaf"));
+    }
+
+    fn bust(&self) -> bool {
+        if *&self.hand_value() > 21 {return true;}
+        false
     }
 }
 
+struct Deck {
+    cards: Vec<Card>,
+}
 
-fn create_deck() -> [Card; 52] {
-    core::array::from_fn(|i| {
-        let suit = match i%4 {
-            0 => Suit::Hearts ,
-            1 => Suit::Clubs,
-            2 => Suit::Spades,
-            3 => Suit::Diamonds,
-            _ => Suit::Clubs,
-        };
-        let rank_val:u8 = ((i/4)%13+1).try_into().unwrap();
-        let rank: String = rank_val.to_string();
-        Card{suit,rank, value:rank_val}
-    })
+impl Deck {
+    fn initiate(&self) -> Vec<Card> {
+        let mut deck = Vec::new();
+        for rank in Rank::iter() {
+            for suit in Suit::iter() {
+                deck.push(Card{suit, rank, value: 5});
+            }
+        }
+        deck
+    }
 }
 
 fn start_game() {
-    let deck = create_deck();
 
-}
-
-fn player_bust(player_total: u8) -> bool {
-    if player_total > 21 {return true;}
-    false
 }
 
 fn dealer_bust(dealer_total: u8) -> bool {
@@ -76,8 +138,3 @@ fn game_end(player_total: u8, dealer_total: u8) -> bool {
     if player_total > 21 || dealer_total > 21 {return true;}
     else {return false;}
 }
-
-fn hit(player: Player, deck: Vec<Card>) {
-    
-}
-
