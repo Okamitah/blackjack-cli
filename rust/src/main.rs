@@ -1,17 +1,25 @@
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+
 fn main() {
     let mut pl = Player {
         cards: vec![
-            Card{suit: Suit::Clubs, rank: Rank::Ace, value: 11},
+            Card{suit: Suit::Clubs, rank: Rank::Two, value: 2},
             Card{suit: Suit::Clubs, rank: Rank::Jack, value: 10}
         ]
     };
     let vl = pl.hand_value();
     println!("Hand's value: {:?}", vl);
-    let mut deck = Deck{cards:Vec::new()};
-    let mut deck_cards = deck.initiate();
+    let deck = Deck{cards:Vec::new()};
+    let deck_cards = deck.initiate();
     pl.hit(deck_cards);
+    println!("Player's hand: {:?}", pl.cards);
     let vl = pl.hand_value();
-    println!("Hand's value: {:?}", vl);
+    if pl.bust() {
+        println!("You're bust :(, value: {}", vl);
+    } else {
+        println!("Your hand: {}", vl);
+    }
 
 }
 
@@ -20,6 +28,26 @@ struct Card {
     suit: Suit,
     rank: Rank,
     value: u8,
+}
+
+impl Card {
+    fn get_value(&self) -> u8 {
+        match &self.rank {
+            Rank::Ace => 11,
+            Rank::Two => 2,
+            Rank::Three => 3,
+            Rank::Four => 4,
+            Rank::Five => 5,
+            Rank::Six => 6,
+            Rank::Seven => 7,
+            Rank::Eight => 8,
+            Rank::Nine => 9,
+            Rank::Ten => 10,
+            Rank::Jack=> 10,
+            Rank::Queen => 10,
+            Rank::King => 10,
+        }
+    }
 }
 
  #[derive(Debug)]
@@ -113,9 +141,13 @@ impl Deck {
         let mut deck = Vec::new();
         for rank in Rank::iter() {
             for suit in Suit::iter() {
-                deck.push(Card{suit, rank, value: 5});
+                let mut card = Card {suit,rank,value:0};
+                card.value = card.get_value();
+                deck.push(card);
             }
         }
+        let mut rng = thread_rng();
+        deck.shuffle(&mut rng);
         deck
     }
 }
