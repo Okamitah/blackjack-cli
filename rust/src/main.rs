@@ -1,5 +1,6 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use std::io;
 
 fn main() {
     start_game();
@@ -144,6 +145,12 @@ impl Dealer {
         self.hit(deck);
     }
 
+    fn draw(&mut self, deck: &mut Vec<Card>) {
+        while self.hand_value() < 17 {
+            self.hit(deck);
+        }
+    }
+
     fn hit(&mut self, deck: &mut Vec<Card>) {
         self.cards.push(deck.pop().expect("Empty deck lil asaf"));
     }
@@ -180,19 +187,57 @@ impl Deck {
 
 fn start_game() {
 
-    let mut pl = Player::new();
+    let mut player = Player::new();
+    let mut dealer = Dealer::new();
+
     let deck = Deck::new();
     let mut deck_cards = deck.initiate();
-    pl.initiate_hand(&mut deck_cards);
-    let vl = pl.hand_value();
-    println!("Hand's value: {:?}", vl);
-    pl.hit(&mut deck_cards);
-    println!("Player's hand: {:?}", pl.cards);
-    let vl = pl.hand_value();
-    if pl.bust() {
-        println!("You're bust :(, value: {}", vl);
-    } else {
-        println!("Your hand: {}", vl);
+
+    player.initiate_hand(&mut deck_cards);
+    dealer.initiate_hand(&mut deck_cards);
+
+    let pl_hand_value = player.hand_value();
+    let dl_hand_value = dealer.hand_value();
+
+    println!("Player's hand: {}", pl_hand_value);
+    println!("\nDealer's hand: {}", dl_hand_value);
+
+    while !player.bust() && !dealer.bust() {
+        println!("\n\nAction:\n\tH: hit,\n\tS: stand");
+        let mut action = String::new();
+        io::stdin().read_line(&mut action).expect("idk man");
+
+        match action.as_str().trim() {
+            "H" => {
+                player.hit(&mut deck_cards);
+                println!("Player's hand: {}", player.hand_value());
+                println!("\nDealer's hand: {}", dealer.hand_value());
+            }
+            "S" => {
+                dealer.draw(&mut deck_cards);
+                println!("Player's hand: {}", player.hand_value());
+                println!("\nDealer's hand: {}", dealer.hand_value());
+                if player.hand_value() > dealer.hand_value() {
+                    println!("You win!!!");
+                } else if player.hand_value() < dealer.hand_value() {
+                    println!("You lose");
+                } else {
+                    println!("It's a draw");
+                }
+                break;
+            }
+            _ => println!("Not an option"),
+        }
+
     }
+
+    if player.bust() {
+        println!("You lose");
+    }
+
+    if dealer.bust() {
+        println!("You win!!!");
+    }
+
 }
 
