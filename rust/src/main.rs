@@ -2,25 +2,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 
 fn main() {
-    let mut pl = Player {
-        cards: vec![
-            Card{suit: Suit::Clubs, rank: Rank::Two, value: 2},
-            Card{suit: Suit::Clubs, rank: Rank::Jack, value: 10}
-        ]
-    };
-    let vl = pl.hand_value();
-    println!("Hand's value: {:?}", vl);
-    let deck = Deck{cards:Vec::new()};
-    let deck_cards = deck.initiate();
-    pl.hit(deck_cards);
-    println!("Player's hand: {:?}", pl.cards);
-    let vl = pl.hand_value();
-    if pl.bust() {
-        println!("You're bust :(, value: {}", vl);
-    } else {
-        println!("Your hand: {}", vl);
-    }
-
+    start_game();
 }
 
 #[derive(Debug)]
@@ -114,6 +96,10 @@ struct Player {
 }
 
 impl Player {
+    fn new() -> Self {
+        Self { cards: Vec::new() }
+    }
+
     fn hand_value(&self) -> u8 {
         let mut sum = 0;
         for card in &self.cards {
@@ -122,8 +108,44 @@ impl Player {
         sum
     }
 
-    fn hit(&mut self, mut deck: Vec<Card>) {
-        &self.cards.push(deck.pop().expect("Empty deck lil asaf"));
+    fn initiate_hand(&mut self, deck: &mut Vec<Card>) {
+        self.hit(deck);
+        self.hit(deck);
+    }
+
+    fn hit(&mut self, deck: &mut Vec<Card>) {
+        self.cards.push(deck.pop().expect("Empty deck lil asaf"));
+    }
+
+    fn bust(&self) -> bool {
+        if *&self.hand_value() > 21 {return true;}
+        false
+    }
+}
+
+struct Dealer {
+    cards: Vec<Card>,
+}
+
+impl Dealer {
+    fn new() -> Self {
+        Self {cards: Vec::new()}
+    }
+
+    fn hand_value(&self) -> u8 {
+        let mut sum = 0;
+        for card in &self.cards {
+            sum += card.value;
+        }
+        sum
+    }
+
+    fn initiate_hand(&mut self, deck: &mut Vec<Card>) {
+        self.hit(deck);
+    }
+
+    fn hit(&mut self, deck: &mut Vec<Card>) {
+        self.cards.push(deck.pop().expect("Empty deck lil asaf"));
     }
 
     fn bust(&self) -> bool {
@@ -137,6 +159,10 @@ struct Deck {
 }
 
 impl Deck {
+    fn new() -> Self {
+        Self {cards: Vec::new()}
+    }
+
     fn initiate(&self) -> Vec<Card> {
         let mut deck = Vec::new();
         for rank in Rank::iter() {
@@ -154,19 +180,19 @@ impl Deck {
 
 fn start_game() {
 
+    let mut pl = Player::new();
+    let deck = Deck::new();
+    let mut deck_cards = deck.initiate();
+    pl.initiate_hand(&mut deck_cards);
+    let vl = pl.hand_value();
+    println!("Hand's value: {:?}", vl);
+    pl.hit(&mut deck_cards);
+    println!("Player's hand: {:?}", pl.cards);
+    let vl = pl.hand_value();
+    if pl.bust() {
+        println!("You're bust :(, value: {}", vl);
+    } else {
+        println!("Your hand: {}", vl);
+    }
 }
 
-fn dealer_bust(dealer_total: u8) -> bool {
-    if dealer_total > 21 {return true;}
-    false
-}
-
-fn dealer_hasto_play(dealer_total: u8) -> bool {
-    if dealer_total < 17 {return true;}
-    false
-}
-
-fn game_end(player_total: u8, dealer_total: u8) -> bool {
-    if player_total > 21 || dealer_total > 21 {return true;}
-    else {return false;}
-}
