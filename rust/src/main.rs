@@ -3,12 +3,12 @@ use rand::thread_rng;
 use std::io;
 
 fn main() {
-    start_game();
+    start_session(100.0);
 }
 
 #[derive(Debug)]
 struct Card {
-    suit: Suit,
+    //suit: Suit,
     rank: Rank,
     value: u8,
 }
@@ -174,7 +174,7 @@ impl Deck {
         let mut deck = Vec::new();
         for rank in Rank::iter() {
             for suit in Suit::iter() {
-                let mut card = Card {suit,rank,value:0};
+                let mut card = Card {/*suit,*/rank,value:0};
                 card.value = card.get_value();
                 deck.push(card);
             }
@@ -185,7 +185,7 @@ impl Deck {
     }
 }
 
-fn start_game() {
+fn start_game(mut bet_amount: f32) -> f32 {
 
     let mut player = Player::new();
     let mut dealer = Dealer::new();
@@ -196,14 +196,21 @@ fn start_game() {
     player.initiate_hand(&mut deck_cards);
     dealer.initiate_hand(&mut deck_cards);
 
-    let pl_hand_value = player.hand_value();
-    let dl_hand_value = dealer.hand_value();
-
-    println!("Player's hand: {}", pl_hand_value);
-    println!("\nDealer's hand: {}", dl_hand_value);
+    if player.hand_value() == 21 {
+        println!("Player's hand: {:?}", player.cards);
+        println!("Blackjack!");
+        dealer.draw(&mut deck_cards);
+        if dealer.hand_value() == 21 {
+            return bet_amount;
+        } else {
+            return bet_amount*2.5;
+        }
+    }
+    println!("Player's hand: {}", player.hand_value());
+    println!("\nDealer's hand: {}", dealer.hand_value());
 
     while !player.bust() && !dealer.bust() {
-        println!("\n\nAction:\n\tH: hit,\n\tS: stand");
+        println!("\n\nAction:\n\tH: hit,\n\tS: stand,\n\tD: double,\n\tSp: split");
         let mut action = String::new();
         io::stdin().read_line(&mut action).expect("idk man");
 
@@ -218,26 +225,60 @@ fn start_game() {
                 println!("Player's hand: {}", player.hand_value());
                 println!("\nDealer's hand: {}", dealer.hand_value());
                 if player.hand_value() > dealer.hand_value() {
-                    println!("You win!!!");
-                } else if player.hand_value() < dealer.hand_value() {
-                    println!("You lose");
-                } else {
-                    println!("It's a draw");
+                    println!("\nYou win {}!!!", bet_amount*2.0);
+                    return bet_amount*2.0;
+                } else if player.hand_value() < dealer.hand_value()
+                    && dealer.hand_value() <= 21{
+                    println!("\nYou lose");
+                    return 0.0;
+                } else if player.hand_value() == dealer.hand_value() {
+                    println!("\nIt's a draw");
+                    return bet_amount;
                 }
                 break;
             }
+            "D" => {
+                bet_amount = bet_amount*2.0;
+            }
+            "Sp" => {
+
+            }
             _ => println!("Not an option"),
         }
-
     }
 
     if player.bust() {
-        println!("You lose");
+        println!("\nYou lose");
+        return 0.0;
     }
 
     if dealer.bust() {
-        println!("You win!!!");
+        println!("\nYou win {}!!!", bet_amount*2.0);
+        return 2.0*bet_amount;
     }
 
+    0.1
+}
+
+fn start_session(mut budget: f32) {
+    println!("Welcome to the table");
+
+    while budget > 0.0 {
+        println!("\nEnter your bet (remaining amount: {})", budget);
+        let mut bet_amout: String = String::new();
+        io::stdin().read_line(&mut bet_amout).expect("idk man");
+        let bet_amount:f32 = match bet_amout.trim().parse() {
+            Ok(num) => num,
+            Err(_) => panic!("idk man"),
+        };
+        
+        if bet_amount > budget {
+            println!("Lower your bet");
+        } else {
+            budget -= bet_amount;
+            let bet_outcome = start_game(bet_amount);
+            budget += bet_outcome;
+        }
+    }
 }
 
