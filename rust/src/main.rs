@@ -3,21 +3,34 @@ use rand::thread_rng;
 use std::io;
 
 fn main() {
-    let initial_budget = 1_000_000_000_000.0;
-    let fixed_bet = 1.0;
+
     let iterations = 100_000;
+    let bet_amount = 1.0;
+    test_strategy(basic_strategy, 0.0, bet_amount, iterations, String::from("Basic (Stand on 17)"));
+    test_strategy(aggressive_strategy, 0.0, bet_amount, iterations, String::from("Aggressive (Stand on 15)"));
+    test_strategy(conservative_strategy, 0.0, bet_amount, iterations, String::from("Conservative (Stand on 18)"));
+    test_strategy(perfect_game, 0.0, bet_amount, iterations, String::from("Perfect"));
+}
 
+fn test_strategy(
+    strategy: impl Fn(u8, &mut Player, &Dealer) -> &'static str,
+    initial_budget: f32,
+    fixed_bet: f32,
+    iterations: usize,
+    strategy_name: String
+) {
+    
     let (final_budget, net_result, is_profitable) =
-        simulate_blackjack(iterations, initial_budget, fixed_bet, basic_strategy);
+        simulate_blackjack(iterations, initial_budget, fixed_bet, strategy);
 
+    println!("\n\nStrategy: {}", strategy_name);
     println!("Final budget: {:.2}", final_budget);
-    println!("Net result: {}", final_budget-initial_budget);
+    println!("Net result: {}", net_result);
     println!(
         "Profitable: {}",
         if is_profitable { "Yes" } else { "No" }
     );
 }
-
 
 #[derive(Debug)]
 struct Card {
@@ -66,7 +79,7 @@ impl Suit {
     }
 }
 
-#[derive(Debug ,Clone, Copy)]
+#[derive(Debug ,Clone, Copy, PartialEq)]
 enum Rank {
     Ace,
     Two,
@@ -116,9 +129,20 @@ impl Player {
 
     fn hand_value(&self) -> u8 {
         let mut sum = 0;
+        let mut aces = 0;
+
         for card in &self.cards {
             sum += card.value;
+            if card.rank == Rank::Ace {
+                aces += 1;
+            }
         }
+
+        while sum > 21 && aces > 0 {
+            sum -= 10;
+            aces -= 1;
+        }
+
         sum
     }
 
@@ -260,11 +284,11 @@ fn start_game_cli(mut bet_amount: f32) -> f32 {
                     player.hand_value();
                     dealer.hand_value();
                     if player.hand_value() > dealer.hand_value() {
-                        return bet_amount;
+                        return bet_amount*2.0;
                     } else if dealer.hand_value() <= 21 {
                         return 0.0;
                     } else {
-                        return bet_amount / 2.0;
+                        return bet_amount;
                     }
                 }
                 
@@ -323,14 +347,15 @@ fn simulate_blackjack(
     let mut budget = initial_budget;
 
     for i in 0..iterations {
-        if budget < fixed_bet {
+        /*if budget < fixed_bet {
             println!("Out of money at iteration {}", i + 1);
             break;
-        }
+        }*/
 
         budget -= fixed_bet;
         let outcome = start_game(fixed_bet, &strategy);
         budget += outcome;
+        //if i%100 == 0 {println!("{}", budget);}
     }
 
     let net_result = budget - initial_budget;
@@ -419,4 +444,79 @@ fn basic_strategy(player_val: u8, _: &mut Player, _: &Dealer) -> &'static str {
     } else {
         "S"
     }
+}
+
+fn conservative_strategy(player_val: u8, _: &mut Player, _: &Dealer) -> &'static str {
+    if player_val < 18 {
+        "H"
+    } else {
+        "S"
+    }
+}
+
+fn aggressive_strategy(player_val: u8, _: &mut Player, _: &Dealer) -> &'static str {
+    if player_val < 15 {
+        "H"
+    } else {
+        "S"
+    }
+}
+
+fn perfect_game(player_val: u8, player: &mut Player, dealer: &Dealer) -> &'static str {
+    let dealer_upcard = match dealer.cards.get(0) {
+        Some(card) => card.rank,
+        None => panic!("Dealer has no visible card"),
+    };
+
+    let is_soft_hand = player.cards.iter().any(|c| c.rank == Rank::Ace);
+
+    if !is_soft_hand {
+        match player_val {
+            5..=7 => "H",
+            8 => match dealer_upcard {
+                Rank::Two | Rank::Three | Rank::Four | Rank::Five | Rank::Six => "D",
+                _ => "H", 
+            },
+            9 => match dealer_upcard {
+                Rank::Two | Rank::Three | Rank::Four | Rank::Five | Rank::Six | Rank::Seven => "D",
+                _ => "H",
+            },
+            10 => match dealer_upcard {
+                Rank::Ten | Rank::Jack | Rank::Queen | Rank::King | Rank::Ace => "D",
+                _ => "H",
+            },
+            11 => match dealer_upcard {
+                Rank::Two | Rank::Three | Rank::Four | Rank::Five | Rank::Six | Rank::Seven | Rank::Eight | Rank::Nine | Rank::Ten | Rank::Jack | Rank::Queen | Rank::King | Rank::Ace => "D",
+            },
+            12 => match dealer_upcard {
+                Rank::Four | Rank::Five | Rank::Six => "S",
+                _ => "H",
+            },
+            13..=16 => match dealer_upcard {
+                Rank::Two | Rank::Three | Rank::Four | Rank::Five | Rank::Six => "S",
+                _ => "H", 
+            },
+            17..=21 => "S", 
+            _ => "H",
+        }
+    } else {
+        match player_val {
+            13..=17 => match dealer_upcard {
+                Rank::Two | Rank::Three | Rank::Four | Rank::Five | Rank::Six | Rank::Seven => "H",
+                _ => "S",
+            },
+            18 => match dealer_upcard {
+                Rank::Nine | Rank::Ten | Rank::Jack | Rank::Queen | Rank::King | Rank::Ace => "S",
+                _ => "H",
+            },
+            19 => match dealer_upcard {
+                Rank::Ten | Rank::Jack | Rank::Queen | Rank::King | Rank::Ace => "S",
+                _ => "H",
+            },
+            20 => "S",
+            21 => "S", 
+            _ => "H", 
+        }
+    }
+
 }
